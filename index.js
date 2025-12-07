@@ -11,12 +11,27 @@ const { appPort } = envVariables;
 
 makeRequiredDirectories();
 
-const allowedUrls = ["http://localhost:3000", "https://admin.adawat360.com"];
+const allowedUrls = [
+  "http://localhost:3000",
+  "http://10.0.2.2:8000",
+  "https://admin.adawat360.com",
+  "https://progenius-backend-production.up.railway.app",
+  process.env.FRONTEND_URL || "*" // Allow defined frontend or all
+];
 
 app.use(
   cors({
-    origin: allowedUrls, // for development only
-    credentials: true, // enables setting cookies in the response
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      if (allowedUrls.indexOf(origin) === -1 && allowedUrls.indexOf("*") === -1) {
+        // Optional: Relax this for public API if you want
+        // return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
+        return callback(null, true); // Temporarily allow all for production troubleshooting
+      }
+      return callback(null, true);
+    },
+    credentials: true,
   })
 );
 
