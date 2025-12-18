@@ -19,8 +19,8 @@ const customerDTO = (data) => {
     phoneNumber: data.phoneNumber,
     profilePicture: data?.profilePicture,
     status: data?.status,
-    // hasAccess: data?.accessPaidCourse,
     destination: data?.destination,
+    completedLessons: data?.completedLessons || [],
   };
 };
 

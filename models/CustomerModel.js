@@ -56,7 +56,8 @@ const customerSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
-});
+  completedLessons: [{ type: String, ref: "lesson", required: false }],
+}, { timestamps: true });
 
 customerSchema.pre("save", async function (next) {
   if (this.isNew) {

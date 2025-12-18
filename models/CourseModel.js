@@ -35,7 +35,7 @@ const courseSchema = new mongoose.Schema({
       required: false,
     },
   ],
-});
+}, { timestamps: true });
 
 courseSchema.pre("save", async function (next) {
   if (this.isNew) {

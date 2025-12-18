@@ -228,6 +228,34 @@ const removePdf = AsyncWrapper(async (req, res, next) => {
   return SuccessMessage(res, "Pdf removed successfully", result);
 });
 
+const toggleLessonComplete = AsyncWrapper(async (req, res, next) => {
+  const { lessonId } = req.params;
+  const { _id } = req.user;
+
+  const customer = await CustomerModel.findById(_id);
+  if (!customer) {
+    return next(new ErrorHandler("Customer not found", 404));
+  }
+
+  if (!customer.completedLessons) {
+    customer.completedLessons = [];
+  }
+
+  const lessonIndex = customer.completedLessons.indexOf(lessonId);
+  if (lessonIndex > -1) {
+    customer.completedLessons.splice(lessonIndex, 1); // Unmark complete
+  } else {
+    customer.completedLessons.push(lessonId); // Mark complete
+  }
+
+  await customer.save();
+
+  return SuccessMessage(res, "Lesson status updated", {
+    isCompleted: lessonIndex === -1,
+    completedLessonsCount: customer.completedLessons.length,
+  });
+});
+
 module.exports = {
   addLesson,
   getLessonDetail,
@@ -235,4 +263,5 @@ module.exports = {
   updateLessons,
   addNewPDF,
   removePdf,
+  toggleLessonComplete,
 };

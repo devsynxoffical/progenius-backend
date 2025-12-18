@@ -7,6 +7,7 @@ const {
   updateLessons,
   addNewPDF,
   removePdf,
+  toggleLessonComplete,
 } = require("../controllers/LessonController");
 const auth = require("../middlewares/Auth");
 const uploadPdf = require("../utils/uploadPdf");
@@ -53,5 +54,7 @@ router
   .get(auth, getLessonDetail)
   .delete([auth, roleAuthorization([ROLES.ADMIN])], deleteLesson)
   .patch([auth, roleAuthorization([ROLES.ADMIN])], updateLessons);
+
+router.route("/toggle-complete/:lessonId").post(auth, toggleLessonComplete);
 
 module.exports = router;
