@@ -9,6 +9,13 @@ const connectDb = require("./config/db");
 const app = express();
 const { appPort } = envVariables;
 
+console.log("-----------------------------------------");
+console.log("Starting Server...");
+console.log("PORT:", appPort);
+console.log("MONGODB_URI:", envVariables.mongoDbURI ? "Set" : "NOT SET");
+console.log("NODE_ENV:", process.env.NODE_ENV);
+console.log("-----------------------------------------");
+
 makeRequiredDirectories();
 
 const allowedUrls = [

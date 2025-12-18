@@ -22,7 +22,8 @@ const dashboardData = AsyncWrapper(async (req, res, next) => {
     },
   ]);
 
-  const paidStudentsCount = studentIdAgg[0].studentIds.length;
+  const paidStudentsCount =
+    studentIdAgg.length > 0 ? studentIdAgg[0].studentIds.length : 0;
   const freeStudentsCount = totalStudents - paidStudentsCount;
 
   return SuccessMessage(res, "Dashboard stats", {
