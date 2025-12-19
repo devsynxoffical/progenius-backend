@@ -16,27 +16,34 @@ const addCourse = AsyncWrapper(async (req, res, next) => {
     description,
     status,
     noOfStudents,
-    courseImage: (req?.file && req.file.filename) || null,
-    destination: (req?.file && req.file.destination) || null,
+    courseImage: req?.file ? req.file.originalname : null,
+    imageData: req?.file ? req.file.buffer : null,
+    imageContentType: req?.file ? req.file.mimetype : null,
+    destination: req?.file ? `uploads/course_placeholder` : null, // Destination logic updated in pre-save or handled via virtuals
   });
   const result = await newCourse.save();
   if (!result) {
     return next(new ErrorHandler("Failed to add course"));
   }
 
+  // Update destination after save if it depends on ID
+  if (req?.file) {
+    result.destination = `uploads/course_${result._id}`;
+    await result.save();
+  }
+
   return SuccessMessage(res, "Course added successfully", result);
 });
 
 const getAllFreeCourses = AsyncWrapper(async (req, res, next) => {
-  const courses = await CourseModel.find({ status: "UNPAID" });
+  const courses = await CourseModel.find({ status: "UNPAID" }).select("-imageData");
   return SuccessMessage(res, "All courses fetched successfully", courses);
 });
 
 const getAllPaidCourses = AsyncWrapper(async (req, res, next) => {
-  const courses = await CourseModel.find({ status: "PAID" }).populate(
-    "students",
-    "_id fullName email"
-  );
+  const courses = await CourseModel.find({ status: "PAID" })
+    .populate("students", "_id fullName email")
+    .select("-imageData");
   return SuccessMessage(res, "All courses fetched successfully", courses);
 });
 
@@ -54,7 +61,7 @@ const deleteCourse = AsyncWrapper(async (req, res, next) => {
 
   await ChapterModel.deleteMany({ course: courseId });
   await CourseModel.deleteOne({ _id: courseId });
-  deleteFolder(`course_${courseId}`);
+  // No need to delete folder as we are using DB
   return SuccessMessage(res, "Course deleted successfully");
 });
 
@@ -73,9 +80,10 @@ const updateCourse = AsyncWrapper(async (req, res, next) => {
   course.noOfStudents = noOfStudents;
 
   if (req?.file) {
-    removeFile(`course_${course._id}/${course.courseImage}`);
-    course.courseImage = req.file.filename;
-    course.destination = req.file.destination;
+    course.courseImage = req.file.originalname;
+    course.imageData = req.file.buffer;
+    course.imageContentType = req.file.mimetype;
+    course.destination = `uploads/course_${course._id}`;
   }
   const result = await course.save();
   if (!result) {

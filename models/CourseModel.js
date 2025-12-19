@@ -10,6 +10,14 @@ const courseSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  imageData: {
+    type: Buffer,
+    required: false,
+  },
+  imageContentType: {
+    type: String,
+    required: false,
+  },
   title: {
     type: String,
     required: true,

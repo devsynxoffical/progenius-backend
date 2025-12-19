@@ -1,30 +1,8 @@
 const multer = require("multer");
-const { getNextDocumentId } = require("../services/CounterService");
-const { makeCourseDirectory } = require("./fileDirectory");
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/"); // Directory to save files
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`); // Unique file name
-  },
-});
+const storage = multer.memoryStorage();
 
-const courseStorage = multer.diskStorage({
-  destination: async (req, file, cb) => {
-    if (req.method === "PATCH") {
-      cb(null, `uploads/course_${req.params.courseId}`);
-    } else {
-      const id = await getNextDocumentId("course");
-      makeCourseDirectory(id);
-      cb(null, `uploads/course_${id}`); // Directory to save files
-    }
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`); // Unique file name
-  },
-});
+const courseStorage = multer.memoryStorage();
 
 // File filter to accept only specific types
 const fileFilter = (req, file, cb) => {

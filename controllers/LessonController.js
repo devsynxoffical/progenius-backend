@@ -25,8 +25,10 @@ const addLesson = AsyncWrapper(async (req, res, next) => {
     req.files.map((item) => {
       pdfs.push({
         title: item.originalname.replace(/\.pdf$/, ""),
-        file: item.filename,
-        destination: item.destination,
+        file: item.originalname,
+        destination: `uploads/course_${chapterData.course}/chap_${chapter}/lesson_placeholder`,
+        data: item.buffer,
+        contentType: item.mimetype,
       });
     });
   }
@@ -44,49 +46,41 @@ const addLesson = AsyncWrapper(async (req, res, next) => {
     return next(new ErrorHandler("Failed to add lesson"));
   }
 
-  // move file to new folder
+  // Update destinations with actual lesson ID
   if (result?.pdfs?.length) {
-    makeChapterAndLessonDirectory(chapterData.course, chapter, result._id);
-
     result.pdfs.forEach((pdf) => {
-      moveFile(
-        pdf.file,
-        `course_${chapterData.course}/chap_${chapter}/lesson_${result._id}/${pdf.file}`
-      );
-
       pdf.destination = `uploads/course_${chapterData.course}/chap_${chapter}/lesson_${result._id}`;
     });
+    await result.save();
   }
-
-  await result.save();
 
   return SuccessMessage(res, "Lesson Added successfully", result);
 });
 
 const getLessonDetail = AsyncWrapper(async (req, res, next) => {
   const { lessonId } = req.params;
+  const lesson = await LessonModel.findById(lessonId).select("-pdfs.data");
+  if (!lesson) {
+    return next(new ErrorHandler("Lesson not found", 404));
+  }
+
   if (req.user.role === ROLES.ADMIN) {
-    const lesson = await LessonModel.findById(lessonId);
-    if (!lesson) {
-      return next(new ErrorHandler("Lesson not found", 404));
-    }
     return SuccessMessage(res, "Lesson fetched successfully", lesson);
   } else {
-    const lessonData = await LessonModel.findById(lessonId).populate(
-      "chapter",
-      "course"
-    );
+    // Populate for student check
+    const lessonData = await LessonModel.findById(lessonId)
+      .populate("chapter", "course")
+      .select("-pdfs.data");
+
     if (!lessonData) {
       return next(new ErrorHandler("Lesson not found", 404));
     }
 
-    console.log(lessonData);
-
     const course = await CourseModel.findOne({
       _id: lessonData.chapter.course,
       $or: [
-        { status: "UNPAID" }, // If UNPAID, no need to check user
-        { status: "PAID", students: req.user._id }, // If PAID, check if user is enrolled
+        { status: "UNPAID" },
+        { status: "PAID", students: req.user._id },
       ],
     });
 
@@ -109,13 +103,7 @@ const deleteLesson = AsyncWrapper(async (req, res, next) => {
   if (!lessonData) {
     return next(new ErrorHandler("Lesson not found", 404));
   }
-  // delete pdf from local system
-  const chapter = await ChapterModel.findById(lessonData?.chapter);
-  if (chapter) {
-    deleteFolder(
-      `course_${chapter.course}/chap_${chapter._id}/lesson_${lessonId}`
-    );
-  }
+  // No need to delete folder as we are using DB
   await LessonModel.deleteOne({ _id: lessonId });
   return SuccessMessage(res, "Lesson deleted successfully");
 });
@@ -163,8 +151,10 @@ const addNewPDF = AsyncWrapper(async (req, res, next) => {
     req.files.map((item) => {
       pdfs.push({
         title: item.originalname.replace(/\.pdf$/, ""),
-        file: item.filename,
+        file: item.originalname,
         destination: `uploads/course_${lessonData.chapter.course}/chap_${lessonData?.chapter._id}/lesson_${lessonId}`,
+        data: item.buffer,
+        contentType: item.mimetype,
       });
     });
   }
@@ -173,18 +163,6 @@ const addNewPDF = AsyncWrapper(async (req, res, next) => {
   const result = await lessonData.save();
   if (!result) {
     return next(new ErrorHandler("Failed to add new PDF"));
-  }
-  // move file to new folder
-  for (const pdf of pdfs) {
-    makeChapterAndLessonDirectory(
-      lessonData.chapter.course,
-      lessonData?.chapter._id,
-      lessonId
-    );
-    moveFile(
-      pdf.file,
-      `course_${lessonData.chapter.course}/chap_${lessonData?.chapter._id}/lesson_${lessonId}/${pdf.file}`
-    );
   }
 
   return SuccessMessage(res, "Lesson Added successfully", result);

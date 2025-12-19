@@ -27,33 +27,48 @@ router.get(
   "/file/*/:fileName",
   AsyncWrapper(async (req, res, next) => {
     const { fileName } = req.params;
-    const destination = req.params[0];
-    const allowedExtensions = [".jpg", ".jpeg", ".png", ".gif", ".pdf"];
+    const destination = req.params[0]; // e.g., "uploads/course_01" or "uploads/course_01/chap_.../lesson_..."
+
     if (!fileName || !destination) {
       return next(
         new ErrorHandler("File name and destination are required", 400)
       );
     }
 
-    console.log(path.extname(fileName));
-    const fileExtension = path.extname(fileName).toLowerCase();
-    if (!allowedExtensions.includes(fileExtension)) {
-      return next(
-        new ErrorHandler(
-          "Invalid file type. Only images and PDFs are allowed",
-          400
-        )
-      );
+    // 1. Try to find in CourseModel first (Course Images)
+    if (destination.startsWith("uploads/course_") && !destination.includes("chap_")) {
+      const courseId = destination.split("_")[1];
+      const course = await CourseModel.findById(courseId);
+
+      if (course && course.imageData) {
+        res.set("Content-Type", course.imageContentType || "image/jpeg");
+        return res.send(course.imageData);
+      }
     }
 
-    const filePath = path.join(__dirname, `../${destination}/${fileName}`);
-    console.log(filePath);
-    if (!existsSync(filePath)) {
-      return next(
-        new ErrorHandler("File not found or may have been deleted", 404)
-      );
+    // 2. Try to find in LessonModel (Lesson PDFs)
+    if (destination.includes("lesson_")) {
+      const lessonId = destination.split("lesson_")[1].split("/")[0];
+      const lesson = await LessonModel.findById(lessonId);
+
+      if (lesson && lesson.pdfs && lesson.pdfs.length > 0) {
+        const pdf = lesson.pdfs.find(p => p.file === fileName || p.title === fileName.replace(/\.pdf$/, ""));
+        if (pdf && pdf.data) {
+          res.set("Content-Type", pdf.contentType || "application/pdf");
+          return res.send(pdf.data);
+        }
+      }
     }
-    res.sendFile(filePath);
+
+    // Fallback: Check local filesystem (for backward compatibility during migration)
+    const localPath = path.join(__dirname, `../${destination}/${fileName}`);
+    if (existsSync(localPath)) {
+      return res.sendFile(localPath);
+    }
+
+    return next(
+      new ErrorHandler("File not found or may have been deleted", 404)
+    );
   })
 );
 module.exports = router;

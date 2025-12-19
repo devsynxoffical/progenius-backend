@@ -1,15 +1,7 @@
 const multer = require("multer");
 
-// Set up storage for PDFs
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${file.originalname}`;
-    cb(null, uniqueName);
-  },
-});
+// Set up storage for PDFs (using memory storage for MongoDB)
+const storage = multer.memoryStorage();
 
 // File filter to accept only PDF files
 const fileFilter = (req, file, cb) => {
