@@ -10,6 +10,8 @@ const ChapterRoutes = require("./ChapterRoutes");
 const LessonRoutes = require("./LessonRoutes");
 const AuthRoutes = require("./AuthRoutes");
 const DashboardRoutes = require("./DashboardRoutes");
+const CourseModel = require("../models/CourseModel");
+const LessonModel = require("../models/LessonModel");
 
 router.get("/health", (req, res) => {
   return res.status(200).json({ message: "Server is up and running" });
